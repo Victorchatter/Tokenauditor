@@ -10,7 +10,7 @@ def _fmt(n: int) -> str:
 
 def render_table(session: Session, flags: list, by_turn: bool = False) -> str:
     L = []
-    L.append(f"tokenauditor — {session.format}, {len(session.turns)} turn(s)")
+    L.append(f"tokenauditor - {session.format}, {len(session.turns)} turn(s)")
     L.append("")
     L.append(f"  Reported total input  (sum over turns): {_fmt(session.reported_total_input)}")
     L.append(f"  Reported total output:                  {_fmt(session.reported_total_output)}")
