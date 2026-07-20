@@ -1,0 +1,19 @@
+[build-system]
+requires = ["flit-core>=3.4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "tokenauditor"
+version = "0.1.0"
+description = "Local, read-only CLI that audits where an AI agent session's token budget went."
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.9"
+authors = [{name = "Victor"}]
+dependencies = ["tiktoken>=0.5"]
+
+[project.scripts]
+tokenauditor = "tokenauditor.cli:main"
+
+[tool.flit.module]
+name = "tokenauditor"
