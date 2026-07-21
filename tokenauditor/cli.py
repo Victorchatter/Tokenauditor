@@ -3,7 +3,15 @@ import sys
 
 from . import flags as flags_mod
 from . import report
-from .parsers import claude_code, detect, openai
+from .parsers import claude_code, codex, detect, openai
+
+
+def _parse(fmt, path):
+    if fmt == "claude_code":
+        return claude_code.parse(path)
+    if fmt == "codex":
+        return codex.parse(path)
+    return openai.parse(path)
 
 
 def main(argv=None) -> int:
@@ -24,7 +32,7 @@ def main(argv=None) -> int:
         return 2
 
     try:
-        session = claude_code.parse(args.file) if fmt == "claude_code" else openai.parse(args.file)
+        session = _parse(fmt, args.file)
     except (ValueError, OSError, KeyError) as e:
         print(f"tokenauditor: failed to parse {args.file}: {e}", file=sys.stderr)
         return 2

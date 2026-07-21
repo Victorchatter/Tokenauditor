@@ -1,10 +1,16 @@
 import json
 
+_CODEX_TYPES = {"session_meta", "response_item", "event_msg"}
+_CLAUDE_TYPES = {"user", "assistant", "system", "last-prompt", "mode",
+                 "permission-mode", "attachment", "file-history-snapshot",
+                 "ai-title", "queue-operation"}
+
 
 def detect(path: str) -> str:
-    # ponytail: first-line sniff. Claude Code JSONL = one JSON object per line with a
-    # `type` field (the first line is often `last-prompt`, not a user/assistant record).
-    # OpenAI = a top-level array, or an object with a `messages` key.
+    # ponytail: first-line sniff. OpenAI = top-level array or {messages:...}.
+    # Claude Code JSONL = one object per line with a `type` in the Claude set
+    # (first line is often `last-prompt`, not a user/assistant record) and a
+    # `message` field on content lines. Codex rollout = objects with a `payload`.
     with open(path, "r", encoding="utf-8") as f:
         first = ""
         for line in f:
@@ -21,14 +27,20 @@ def detect(path: str) -> str:
         try:
             o = json.loads(first)
         except json.JSONDecodeError:
-            # pretty-printed object where first line is just "{"
-            return _openai_or_error(path)
+            return _openai_or_error(path)  # pretty-printed object where first line is just "{"
         if isinstance(o, dict):
             if "messages" in o:
                 return "openai"
-            if "type" in o:
+            t = o.get("type")
+            if t in _CODEX_TYPES:
+                return "codex"
+            if t in _CLAUDE_TYPES:
                 return "claude_code"
-        raise ValueError("unrecognized transcript format (expected Claude Code JSONL or OpenAI messages JSON)")
+            if "payload" in o:
+                return "codex"
+            if "message" in o:
+                return "claude_code"
+        raise ValueError("unrecognized transcript format (expected Claude Code JSONL, Codex rollout, or OpenAI messages JSON)")
 
     raise ValueError("unrecognized transcript format (first line not JSON)")
 
@@ -41,4 +53,4 @@ def _openai_or_error(path: str) -> str:
         raise ValueError(f"unrecognized transcript format (could not parse as OpenAI JSON: {e})")
     if isinstance(o, list) or (isinstance(o, dict) and "messages" in o):
         return "openai"
-    raise ValueError("unrecognized transcript format (expected Claude Code JSONL or OpenAI messages JSON)")
+    raise ValueError("unrecognized transcript format (expected Claude Code JSONL, Codex rollout, or OpenAI messages JSON)")

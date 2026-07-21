@@ -5,6 +5,7 @@ import sys
 import tempfile
 
 import tokenauditor.parsers.claude_code as cc
+import tokenauditor.parsers.codex as codex
 import tokenauditor.parsers.openai as oai
 from tokenauditor import flags
 from tokenauditor.cli import main
@@ -30,6 +31,31 @@ def _openai_synthetic():
             {"role": "tool", "tool_call_id": "c1", "content": "X" * 4000},
         ],
     })
+
+
+def _codex_synthetic():
+    def L(o): return json.dumps(o)
+    lines = [
+        L({"type": "session_meta", "payload": {"id": "s1",
+           "base_instructions": {"text": "You are Codex, a coding agent."}}}),
+        L({"type": "response_item", "payload": {"type": "message", "role": "user",
+           "content": [{"type": "input_text", "text": "hi"}]}}),
+        L({"type": "response_item", "payload": {"type": "message", "role": "assistant",
+           "content": [{"type": "output_text", "text": "ok"}]}}),
+        L({"type": "response_item", "payload": {"type": "function_call", "name": "read",
+           "arguments": '{"p":1}', "call_id": "c1"}}),
+        L({"type": "response_item", "payload": {"type": "function_call_output",
+           "call_id": "c1", "output": "X" * 4000}}),
+        L({"type": "response_item", "payload": {"type": "message", "role": "assistant",
+           "content": [{"type": "output_text", "text": "again"}]}}),
+        L({"type": "response_item", "payload": {"type": "function_call", "name": "read",
+           "arguments": '{"p":1}', "call_id": "c2"}}),
+        L({"type": "event_msg", "payload": {"type": "token_count", "info": {
+           "last_token_usage": {"input_tokens": 100, "cached_input_tokens": 50,
+                                "output_tokens": 30, "reasoning_output_tokens": 5,
+                                "total_tokens": 185}}}}),
+    ]
+    return "\n".join(lines)
 
 
 def _claude_synthetic():
@@ -76,6 +102,26 @@ def test_openai():
         os.remove(p)
 
 
+def test_codex():
+    p = _write(".jsonl", _codex_synthetic())
+    try:
+        s = codex.parse(p)
+        cats = s.categories
+        _assert(s.format == "codex", "codex: format must be codex")
+        _assert(s.categories["system+tools_prefix"] > 0, "codex: system prefix missing")
+        _assert(not s.prefix_inferred, "codex: prefix must be exact (from base_instructions), not inferred")
+        _assert(cats["total_visible"] == sum(v for k, v in cats.items() if k != "total_visible"),
+                "codex: categories must sum to total_visible")
+        _assert(s.reported_total_input == 150, f"codex: reported_total_input {s.reported_total_input} != 150")
+        _assert(s.reported_total_output == 35, f"codex: reported_total_output {s.reported_total_output} != 35")
+        _assert(cats["tool_results"] > cats["user_text"], "codex: tool_results should exceed user_text")
+        fl = {f["flag"] for f in flags.check(s)}
+        _assert("HEAVY_TOOL_RESULT" in fl, "codex: HEAVY_TOOL_RESULT should fire")
+        _assert("REPEAT_TOOL_CALL" in fl, "codex: REPEAT_TOOL_CALL should fire")
+    finally:
+        os.remove(p)
+
+
 def test_claude():
     text, expected_total = _claude_synthetic()
     p = _write(".jsonl", text)
@@ -113,6 +159,7 @@ def test_cli_exit_codes():
 
 def main_selfcheck():
     test_openai()
+    test_codex()
     test_claude()
     test_cli_exit_codes()
     print("selfcheck OK")
