@@ -7,7 +7,7 @@ import tempfile
 import tokenauditor.parsers.claude_code as cc
 import tokenauditor.parsers.codex as codex
 import tokenauditor.parsers.openai as oai
-from tokenauditor import flags
+from tokenauditor import charts, flags
 from tokenauditor.cli import main
 
 
@@ -157,10 +157,25 @@ def test_cli_exit_codes():
         os.remove(p)
 
 
+def test_charts():
+    text, _expected_total = _claude_synthetic()
+    p = _write(".jsonl", text)
+    try:
+        s = cc.parse(p)
+        bar = charts.category_bar_svg(s)
+        _assert(bar.startswith("<svg") and "</svg>" in bar, "charts: bar.svg must be a valid SVG")
+        area = charts.turn_area_svg(s)
+        _assert(area.startswith("<svg") and "</svg>" in area,
+                "charts: area.svg must be a valid SVG for transcripts with usage")
+    finally:
+        os.remove(p)
+
+
 def main_selfcheck():
     test_openai()
     test_codex()
     test_claude()
+    test_charts()
     test_cli_exit_codes()
     print("selfcheck OK")
 

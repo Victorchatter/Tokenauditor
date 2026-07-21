@@ -5,3 +5,8 @@ build/
 dist/
 .venv/
 tmp_transcript.json
+.playwright-mcp/
+chart_preview.png
+docs/_chart_preview.html
+docs/area.svg
+docs/bar.svg

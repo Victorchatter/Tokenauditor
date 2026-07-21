@@ -1,6 +1,6 @@
 # tokenauditor
 
-A local, read-only CLI that parses a recorded AI agent session transcript (Claude Code JSONL or OpenAI messages JSON) and tells you **where the token budget went** — a per-turn breakdown across system prompt, tool definitions, tool results, and user/assistant messages — plus waste flags.
+A local, read-only CLI that parses a recorded AI agent session transcript (Claude Code JSONL, Codex rollout JSONL, or OpenAI messages JSON) and tells you **where the token budget went** — a per-turn breakdown across system prompt, tool definitions, tool results, and user/assistant messages — plus waste flags.
 
 Fully offline. No API keys, no telemetry, never mutates your transcript.
 
@@ -23,9 +23,24 @@ tokenauditor <file>              # summary table + waste flags
 tokenauditor <file> --by-turn    # add a per-turn table
 tokenauditor <file> --flags      # waste flags only
 tokenauditor <file> --json       # machine-readable JSON
+tokenauditor <file> --charts out # write SVG charts to out/
 ```
 
-`<file>` is a Claude Code session JSONL (e.g. `~/.claude/projects/<proj>/<session>.jsonl`) or an OpenAI messages JSON (`[{...}]` or `{"messages":[...]}`).
+`<file>` is one of:
+- a Claude Code session JSONL (e.g. `~/.claude/projects/<proj>/<session>.jsonl`)
+- a Codex rollout JSONL (`session_meta` + `response_item` + `event_msg` lines)
+- an OpenAI messages JSON (`[{...}]` or `{"messages":[...]}`)
+
+## Charts
+
+`--charts <dir>` writes two self-contained SVGs:
+
+- `bar.svg` — estimated token breakdown by category.
+- `area.svg` — reported input composition per turn (cache read, cache creation, uncached). Empty for transcripts without per-turn usage (e.g. plain OpenAI messages).
+
+```bash
+tokenauditor session.jsonl --charts charts/
+```
 
 ## Example output
 
