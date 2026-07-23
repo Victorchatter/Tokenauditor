@@ -6,7 +6,6 @@ dist/
 .venv/
 tmp_transcript.json
 .playwright-mcp/
-chart_preview.png
+# dev-only chart preview (the shipped charts docs/bar.svg + docs/area.svg are committed)
 docs/_chart_preview.html
-docs/area.svg
-docs/bar.svg
+chart_preview.png

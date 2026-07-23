@@ -46,8 +46,8 @@ Agent sessions are expensive, but the bill is a black box. Token usage is report
 
 ```bash
 # Install
-pipx install .
-# or: pip install .
+pipx install git+https://github.com/Victorchatter/Tokenauditor.git
+# or, from a local clone: pipx install .
 
 # Audit a Claude Code session
 tokenauditor ~/.claude/projects/my-project/2026-07-22-session.jsonl
@@ -63,10 +63,10 @@ tokenauditor session.jsonl --by-turn --charts ./charts
 Requires **Python 3.9+**.
 
 ```bash
-pipx install .
+pipx install git+https://github.com/Victorchatter/Tokenauditor.git
 ```
 
-Prefer `pip`? That works too:
+From a local clone instead:
 
 ```bash
 pip install .
@@ -95,6 +95,22 @@ tokenauditor <file> --charts out # write SVG charts to out/
 | **OpenAI messages JSON** | `[{...}]` or `{"messages": [...], "tools": [...]}` | `system` / `user` / `assistant` / `tool` roles |
 
 Format is auto-detected from the first non-blank line — no manual flags needed.
+
+### Provider token accounting
+
+The three parsers surface different things, because each transcript format records different fields. This is what tokenauditor actually reads (not what the provider's API accepts):
+
+| Field | Claude Code JSONL | OpenAI messages | Codex traces |
+|---|---|---|---|
+| Per-turn input/output tokens | **reported** (from Anthropic `usage`) | **estimated** (no `usage` object in the file) | **reported** (from `token_count` events) |
+| Cache creation / read tokens | yes (`cache_creation_input_tokens`, `cache_read_input_tokens`) | n/a | n/a |
+| System prompt + tool defs prefix | inferred (first turn's input − first user message) | counted directly (`tools` JSON + `system` text) | counted (`base_instructions` + `system` text) |
+| Thinking / reasoning tokens | yes (`thinking` blocks) | no | yes (`reasoning` summary) |
+| Tool-call args + results | yes | yes | yes |
+| Tool-name attribution | `tool_use_id` / `toolUseResult` | `tool_call_id` | `call_id` |
+| Reported input/output totals | input + output | estimated only | input + output |
+
+The OpenAI column is estimation-only because a serialized `messages` array carries no `usage` block — tokenauditor counts the visible text/tools instead and labels the result accordingly. Claude Code and Codex both carry per-turn usage, so their numbers are reported, not estimated.
 
 ---
 
