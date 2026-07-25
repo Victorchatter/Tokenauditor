@@ -80,7 +80,16 @@ pip install .
 
 > **Offline note:** `tiktoken` downloads its BPE table the first time it tokenizes text. After one successful run the table is cached locally. On a fully air-gapped machine where the download cannot happen, tokenauditor transparently falls back to a documented `~4 chars/token` heuristic and labels all estimates `(approx, heuristic (offline))`. The numbers are never silently wrong.
 >
-> Pass **`--offline`** to skip `tiktoken` entirely, so the download is never *attempted*. Use this when egress itself is the concern rather than availability — the fallback above handles a failed download, but only after trying to make one. Measured on a 503-turn session, the heuristic landed within 0.04% of tiktoken (35,891 vs 35,875 prefix tokens).
+> Pass **`--offline`** to skip `tiktoken` entirely, so the download is never *attempted*. Use this when egress itself is the concern rather than availability — the fallback above handles a failed download, but only after trying to make one.
+>
+> **How good is the heuristic? It depends entirely on the content.** Measured on one 503-turn session:
+>
+> | Category | tiktoken | heuristic | divergence |
+> |---|---|---|---|
+> | `system+tools_prefix` | 35,875 | 35,891 | **0.04%** |
+> | `tool_results` | 8,467,796 | 3,043,519 | **2.78× under** |
+>
+> Prose-like content (system prompts, instructions) lands almost exactly. **Tool results do not** — they are mostly file contents, code, JSON and logs, which tokenize far denser than the `~4 chars/token` rule assumes. Since tool results are usually the largest category, `--offline` totals should be read as a **lower bound**, not an estimate. Use it to find *which* turn is heavy, not to size a bill.
 
 ---
 

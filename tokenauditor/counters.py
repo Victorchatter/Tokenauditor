@@ -34,7 +34,10 @@ def _ensure():
         _MODE = "tiktoken"
     except Exception:
         # ponytail: heuristic ceiling = ~4 chars/token (English/code rule of thumb).
-        # Upgrade path: ship/cache a real BPE file or call a real tokenizer.
+        # MEASURED 2026-07-25 on a 503-turn session: within 0.04% of tiktoken on
+        # the system+tools prefix, but 2.78x UNDER on tool_results (3.0M vs 8.5M) —
+        # file contents/code/JSON tokenize far denser than 4 chars/token. Treat
+        # offline totals as a lower bound. Upgrade path: vendor a real BPE file.
         _ENC = None
         _MODE = "heuristic"
 
