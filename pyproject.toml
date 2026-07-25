@@ -8,9 +8,24 @@ version = "0.1.0"
 description = "Local, read-only CLI that audits where an AI agent session's token budget went."
 readme = "README.md"
 license = {text = "MIT"}
-requires-python = ">=3.9"
+requires-python = ">=3.10"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
 authors = [{name = "Victor"}]
 dependencies = ["tiktoken>=0.5"]
+
+[project.urls]
+Homepage = "https://github.com/Victorchatter/Tokenauditor"
+Repository = "https://github.com/Victorchatter/Tokenauditor"
 
 [project.scripts]
 tokenauditor = "tokenauditor.cli:main"
