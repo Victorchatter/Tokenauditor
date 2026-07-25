@@ -29,6 +29,11 @@ def detect(path: str) -> str:
         except json.JSONDecodeError:
             return _openai_or_error(path)  # pretty-printed object where first line is just "{"
         if isinstance(o, dict):
+            # agent-vcr tape: wire-level events carrying a `kind`. Checked before
+            # "messages", because a model_request body can contain one.
+            if o.get("kind") in ("model_request", "model_response",
+                                 "tool_call", "tool_result", "run_aborted"):
+                return "tape"
             if "messages" in o:
                 return "openai"
             t = o.get("type")

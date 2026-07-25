@@ -6,7 +6,7 @@ from . import charts
 from . import counters
 from . import flags as flags_mod
 from . import report
-from .parsers import claude_code, codex, detect, openai
+from .parsers import claude_code, codex, detect, openai, tape
 
 
 def _parse(fmt, path):
@@ -14,6 +14,8 @@ def _parse(fmt, path):
         return claude_code.parse(path)
     if fmt == "codex":
         return codex.parse(path)
+    if fmt == "tape":
+        return tape.parse(path)
     return openai.parse(path)
 
 

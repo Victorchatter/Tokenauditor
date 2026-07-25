@@ -7,6 +7,8 @@ import tempfile
 import tokenauditor.parsers.claude_code as cc
 import tokenauditor.parsers.codex as codex
 import tokenauditor.parsers.openai as oai
+import tokenauditor.parsers.tape as tape
+from tokenauditor.parsers import detect
 from tokenauditor import charts, flags
 from tokenauditor.cli import main
 
@@ -140,6 +142,54 @@ def test_claude():
         os.remove(p)
 
 
+def _tape_synthetic():
+    def L(o): return json.dumps(o)
+    req = L({"system": "You are careful. " * 30,
+             "tools": [{"name": "read", "description": "Read a file",
+                        "input_schema": {"type": "object"}}],
+             "messages": [{"role": "user", "content": "audit this repo"}]})
+    lines = [
+        L({"kind": "model_request", "seq": 1, "provider": "anthropic", "body": req}),
+        L({"kind": "tool_call", "seq": 2, "server": "fs", "tool": "read",
+           "args": {"p": "/big.py"}, "args_hash": "h1"}),
+        L({"kind": "tool_result", "seq": 3, "server": "fs", "tool": "read",
+           "args_hash": "h1", "result": {"text": "x = 1" * 2000}}),
+        L({"kind": "model_response", "seq": 4, "provider": "anthropic",
+           "body": L({"content": [{"type": "text", "text": "Found it."}]}),
+           "usage": {"input_tokens": 9000, "cache_read_input_tokens": 1200,
+                     "output_tokens": 40}}),
+    ]
+    return "\n".join(lines) + "\n"
+
+
+def test_tape():
+    """agent-vcr tape -> tokenauditor.
+
+    This is the cross-tool interop the LocalLab README advertises. Without a
+    test it rots silently, and the family claim stops being true.
+    """
+    p = _write(".jsonl", _tape_synthetic())
+    before = open(p, "rb").read()
+    try:
+        _assert(detect.detect(p) == "tape", "tape: detect must return 'tape'")
+        s = tape.parse(p)
+        _assert(s.format == "agent_vcr_tape", f"tape: format {s.format}")
+        _assert(len(s.turns) == 1, f"tape: expected 1 turn, got {len(s.turns)}")
+        _assert(s.reported_total_input == 10200,
+                f"tape: reported_total_input {s.reported_total_input} != 10200")
+        # A tape records the raw request, so the prefix is COUNTED, not inferred.
+        _assert(s.inferred_prefix > 0 and not s.prefix_inferred,
+                "tape: prefix must be counted exactly, not inferred")
+        _assert(s.categories["user_text"] > 0,
+                "tape: user_text must be populated, else HEAVY_TOOL_RESULT never fires")
+        fl = {f["flag"] for f in flags.check(s)}
+        _assert("HEAVY_TOOL_RESULT" in fl, "tape: HEAVY_TOOL_RESULT should fire")
+        _assert(open(p, "rb").read() == before,
+                "tape: transcript must not change (read-only)")
+    finally:
+        os.remove(p)
+
+
 def test_cli_exit_codes():
     p = _write(".json", _openai_synthetic())
     saved_out, saved_err = sys.stdout, sys.stderr
@@ -175,6 +225,7 @@ def main_selfcheck():
     test_openai()
     test_codex()
     test_claude()
+    test_tape()
     test_charts()
     test_cli_exit_codes()
     print("selfcheck OK")

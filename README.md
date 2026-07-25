@@ -110,6 +110,14 @@ tokenauditor <file> --charts out # write SVG charts to out/
 | **Claude Code JSONL** | `~/.claude/projects/<proj>/<session>.jsonl` | `user` and `assistant` records with Anthropic `usage` |
 | **Codex rollout JSONL** | OpenAI Codex rollout logs | `session_meta` + `response_item` + `event_msg` lines |
 | **OpenAI messages JSON** | `[{...}]` or `{"messages": [...], "tools": [...]}` | `system` / `user` / `assistant` / `tool` roles |
+| **agent-vcr tape** | a tape written by [agent-vcr](https://github.com/Victorchatter/AgentVCR) | `model_request` / `model_response` / `tool_call` / `tool_result` events |
+
+> **Tapes give an exact prefix, not an inferred one.** For Claude Code JSONL the system+tools cost has to be inferred (first turn's input minus the first user message). A tape records the raw request body, so `system` and `tools` are counted directly — the report says `(exact)` instead of `(inferred)`. If you want the most accurate prefix number, record with `agent-vcr` and audit the tape:
+>
+> ```bash
+> agent-vcr record --tape run.jsonl -- claude -p "refactor the auth module"
+> tokenauditor run.jsonl
+> ```
 
 Format is auto-detected from the first non-blank line — no manual flags needed.
 
