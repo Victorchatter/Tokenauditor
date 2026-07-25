@@ -6,7 +6,7 @@
 
 A local, read-only CLI that audits recorded agent transcripts — Claude Code, OpenAI, and Codex — and reports a per-turn token breakdown plus waste flags.
 
-[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Offline-first](https://img.shields.io/badge/offline-first-orange.svg)]()
 [![No API keys](https://img.shields.io/badge/no%20API%20keys-success.svg)]()
@@ -26,6 +26,12 @@ Agent sessions are expensive, but the bill is a black box. Token usage is report
 - unchecked context growth across turns.
 
 **tokenauditor parses the actual transcript** and tells you, in seconds, exactly where the budget went. It runs entirely offline, needs no API keys, and never modifies your source file.
+
+---
+
+## How this compares
+
+[context-viewer](https://github.com/auditt98/context-viewer) does the same core job — a per-turn token breakdown, a framework-overhead panel, a heaviest-blocks table — and it reads Claude Code, Cowork, *and* Codex transcripts. If you want a local web UI to click through a session, it's a strong choice. tokenauditor is narrower on purpose: it's a CLI, so it drops into a pipeline or CI step (`--json`, `--charts` for SVGs) instead of opening a browser tab; it also parses OpenAI messages JSON, and every token count is labeled with exactly how it was produced — `(approx, tiktoken)` or `(approx, heuristic (offline))` — with a `--offline` flag that guarantees no network call is even attempted.
 
 ---
 
@@ -60,7 +66,7 @@ tokenauditor session.jsonl --by-turn --charts ./charts
 
 ## Installation
 
-Requires **Python 3.9+**.
+Requires **Python 3.10+**.
 
 ```bash
 pipx install git+https://github.com/Victorchatter/Tokenauditor.git
