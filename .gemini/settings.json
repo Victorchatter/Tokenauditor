@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "engramkit": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "engramkit",
+        "serve"
+      ]
+    }
+  }
+}

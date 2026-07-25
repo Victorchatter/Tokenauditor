@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "engramkit": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "engramkit",
+        "serve"
+      ],
+      "env": {}
+    }
+  }
+}

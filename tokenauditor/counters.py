@@ -5,11 +5,28 @@ import json
 # char-based heuristic and label it clearly in the report.
 _ENC = None
 _MODE = None  # "tiktoken" | "heuristic"
+_FORCE_OFFLINE = False
+
+
+def force_offline(on: bool = True) -> None:
+    """Skip tiktoken entirely, so no BPE-table download is ever attempted.
+
+    The fallback already handles a *failed* download, but only after trying —
+    which is a network call. On an egress-controlled machine the attempt itself
+    is the problem, so this makes the offline promise something you can assert
+    rather than something you discover.
+    """
+    global _FORCE_OFFLINE, _ENC, _MODE
+    _FORCE_OFFLINE = on
+    _ENC, _MODE = None, None  # re-resolve on next use
 
 
 def _ensure():
     global _ENC, _MODE
-    if _ENC is not None:
+    if _MODE is not None:
+        return
+    if _FORCE_OFFLINE:
+        _ENC, _MODE = None, "heuristic"
         return
     try:
         import tiktoken

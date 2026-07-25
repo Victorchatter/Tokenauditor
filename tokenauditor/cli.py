@@ -3,6 +3,7 @@ import os
 import sys
 
 from . import charts
+from . import counters
 from . import flags as flags_mod
 from . import report
 from .parsers import claude_code, codex, detect, openai
@@ -39,7 +40,13 @@ def main(argv=None) -> int:
     p.add_argument("--by-turn", action="store_true", help="include a per-turn table")
     p.add_argument("--flags", action="store_true", help="print waste flags only")
     p.add_argument("--charts", metavar="DIR", help="write SVG charts (bar.svg + area.svg) to DIR")
+    p.add_argument("--offline", action="store_true",
+                   help="never load tiktoken; use the documented ~4 chars/token heuristic. "
+                        "Guarantees no network call is attempted.")
     args = p.parse_args(argv)
+
+    if args.offline:
+        counters.force_offline()
 
     try:
         fmt = detect.detect(args.file)

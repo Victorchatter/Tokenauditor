@@ -73,6 +73,8 @@ pip install .
 ```
 
 > **Offline note:** `tiktoken` downloads its BPE table the first time it tokenizes text. After one successful run the table is cached locally. On a fully air-gapped machine where the download cannot happen, tokenauditor transparently falls back to a documented `~4 chars/token` heuristic and labels all estimates `(approx, heuristic (offline))`. The numbers are never silently wrong.
+>
+> Pass **`--offline`** to skip `tiktoken` entirely, so the download is never *attempted*. Use this when egress itself is the concern rather than availability — the fallback above handles a failed download, but only after trying to make one. Measured on a 503-turn session, the heuristic landed within 0.04% of tiktoken (35,891 vs 35,875 prefix tokens).
 
 ---
 

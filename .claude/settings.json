@@ -1,0 +1,25 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"const p=(process.env.CLAUDE_PROJECT_DIR||'.')+'/.engram/INDEX.md';try{process.stdout.write(require('fs').readFileSync(p,'utf8'))}catch(e){process.stdout.write('(engram: no memories yet in this project)')}\""
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"process.stdout.write('engram reminder: if you made decisions, fixed root-causes, or learned preferences this session, save them with the engram remember MCP tool or: engramkit add. If nothing new, you may stop now.')\""
+          }
+        ]
+      }
+    ]
+  }
+}
