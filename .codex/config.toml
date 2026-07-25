@@ -1,4 +1,0 @@
-
-[mcp_servers.engramkit]
-command = "npx"
-args = ["-y", "engramkit", "serve"]
