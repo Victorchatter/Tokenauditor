@@ -80,3 +80,10 @@ def main(argv=None) -> int:
 
     sys.stdout.write(report.render_table(session, fl, by_turn=args.by_turn))
     return 0
+
+
+# ponytail: `python -m tokenauditor.cli` used to run, exit 0, and print nothing —
+# a silent no-op, because main() was defined but never called. __main__.py covers
+# `python -m tokenauditor`, but the longer form is the one people reach for.
+if __name__ == "__main__":
+    sys.exit(main())
