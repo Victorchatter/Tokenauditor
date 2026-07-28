@@ -47,6 +47,8 @@ def main(argv=None) -> int:
                    help="estimate USD spend per turn and total")
     p.add_argument("--cost-json", action="store_true",
                    help="emit machine-readable cost JSON")
+    p.add_argument("--cost-threshold", type=float, default=0.10, metavar="USD",
+                   help="warn when a turn's estimated cost exceeds USD (default: 0.10)")
     p.add_argument("--model",
                    help="override the model used for cost estimation (default: auto-detect)")
     p.add_argument("--offline", action="store_true",
@@ -83,9 +85,9 @@ def main(argv=None) -> int:
             print(f"tokenauditor: could not detect model; assuming {model} for cost estimate",
                   file=sys.stderr)
         if args.cost_json:
-            sys.stdout.write(report.render_cost_json(session, model))
+            sys.stdout.write(report.render_cost_json(session, model, threshold=args.cost_threshold))
         else:
-            sys.stdout.write(report.render_cost_table(session, model))
+            sys.stdout.write(report.render_cost_table(session, model, threshold=args.cost_threshold))
         return 0
 
     if args.charts:

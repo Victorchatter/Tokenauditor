@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.0
+
+### Added
+- `--cost-threshold USD` (default `0.10`) warns when a turn's estimated cost exceeds
+  the threshold while using `--cost` or `--cost-json`.
+- `EXPENSIVE_TURN` cost warning: fired when a single turn's cost_total exceeds
+  `--cost-threshold`.
+- `EXPENSIVE_TOOL` cost warning: fired when a tool result's token count is larger
+  than the turn's reported `total_input + output`.
+- Cost warnings are rendered below the total in `--cost` tables and included as a
+  top-level `warnings` array in `--cost-json` output.
+- `selfcheck.py` exercises both cost warnings and asserts `--cost-json` includes them.
+
 ## 0.2.0
 
 ### Added

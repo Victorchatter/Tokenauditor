@@ -101,8 +101,9 @@ tokenauditor <file> --by-turn    # summary + per-turn table
 tokenauditor <file> --flags      # waste flags only
 tokenauditor <file> --json       # machine-readable JSON report
 tokenauditor <file> --charts out # write SVG charts to out/
-tokenauditor <file> --cost       # USD cost per turn and total
-tokenauditor <file> --cost-json  # machine-readable cost JSON
+tokenauditor <file> --cost                 # USD cost per turn and total
+tokenauditor <file> --cost-json            # machine-readable cost JSON
+tokenauditor <file> --cost-threshold 0.25  # warn when a turn costs more than $0.25
 ```
 
 ### Supported transcript formats
@@ -176,6 +177,13 @@ Add `--cost` to estimate USD spend per turn and a running total:
 tokenauditor session.jsonl --cost
 ```
 
+Use `--cost-threshold USD` (default `0.10`) to warn when any single turn's
+estimated cost exceeds that amount:
+
+```bash
+tokenauditor session.jsonl --cost --cost-threshold 0.25
+```
+
 Output columns: turn, input tokens, output tokens, cache tokens, input cost,
 output cost, cache cost, and cumulative cost. The model is auto-detected from
 transcript fields (`model`, `model_id`, etc.); if unknown, tokenauditor warns
@@ -186,6 +194,28 @@ For machine-readable output:
 ```bash
 tokenauditor session.jsonl --cost-json
 ```
+
+`--cost-json` emits the same per-turn rows plus a top-level `warnings` array:
+
+```json
+{
+  "model": "claude-3-5-sonnet-20241022",
+  "currency": "USD",
+  "total_cost": 0.121500,
+  "by_turn": [ ... ],
+  "warnings": [
+    {"flag": "EXPENSIVE_TURN", "message": "EXPENSIVE_TURN: turn 1 cost $0.121500 exceeds threshold $0.100000", "turn": 1},
+    {"flag": "EXPENSIVE_TOOL", "message": "EXPENSIVE_TOOL: read result ~125000tok > turn 1 input+output (~40100tok)", "turn": 1}
+  ]
+}
+```
+
+### Cost warnings
+
+| Flag | Rule |
+|---|---|
+| **EXPENSIVE_TURN** | A turn's `cost_total` exceeds `--cost-threshold` |
+| **EXPENSIVE_TOOL** | A tool result's token count is larger than that turn's reported `total_input + output` |
 
 When a transcript reports provider token counts, those are used. Otherwise
 tokenauditor falls back to tiktoken or the offline heuristic and labels the

@@ -1,6 +1,10 @@
 from .parsers import Session
 
 
+def _fmt_cost(n: float) -> str:
+    return f"${n:,.6f}" if n >= 0.001 else f"${n:.8f}"
+
+
 def check(session: Session) -> list:
     return (
         _heavy_tool_result(session)
@@ -61,3 +65,42 @@ def _repeat_tool_call(s: Session) -> list:
                 "turn": idxs[0],
             })
     return out
+
+
+def check_cost_warnings(session: Session, cost_rows: list, threshold: float) -> list:
+    """Return cost warnings for turns exceeding a spend threshold or tool results
+    that dominate a turn.
+
+    - EXPENSIVE_TURN: a turn's ``cost_total`` exceeds *threshold*.
+    - EXPENSIVE_TOOL: a tool result's token count is larger than the turn's
+      ``total_input + output``.
+    """
+    warnings = []
+    if threshold is None:
+        threshold = 0.0
+
+    for row in cost_rows:
+        total = row.get("cost_total", 0.0)
+        if total > threshold:
+            turn = row.get("turn")
+            warnings.append({
+                "flag": "EXPENSIVE_TURN",
+                "message": (f"EXPENSIVE_TURN: turn {turn} cost {_fmt_cost(total)} "
+                            f"exceeds threshold {_fmt_cost(threshold)}"),
+                "turn": turn,
+            })
+
+    for turn in session.turns:
+        total_io = turn.total_input + turn.output
+        if total_io <= 0:
+            continue
+        for name, tok in turn.tool_results:
+            if tok > total_io:
+                warnings.append({
+                    "flag": "EXPENSIVE_TOOL",
+                    "message": (f"EXPENSIVE_TOOL: {name} result ~{tok}tok > "
+                                f"turn {turn.index} input+output (~{total_io}tok)"),
+                    "turn": turn.index,
+                })
+
+    return warnings

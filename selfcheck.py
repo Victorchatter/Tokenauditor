@@ -9,7 +9,7 @@ import tokenauditor.parsers.codex as codex
 import tokenauditor.parsers.openai as oai
 import tokenauditor.parsers.tape as tape
 from tokenauditor.parsers import detect
-from tokenauditor import charts, flags
+from tokenauditor import charts, flags, report
 from tokenauditor.cli import main
 
 
@@ -191,6 +191,70 @@ def test_tape():
         os.remove(p)
 
 
+def _cost_warning_tape():
+    def L(o): return json.dumps(o)
+    big_result = "word " * 100000
+    req = L({"model": "claude-3-5-sonnet-20241022",
+             "system": "You are careful.",
+             "tools": [{"name": "read", "description": "Read a file",
+                        "input_schema": {"type": "object"}}],
+             "messages": [{"role": "user", "content": "audit this repo"}]})
+    lines = [
+        L({"kind": "model_request", "seq": 1, "provider": "anthropic", "body": req}),
+        L({"kind": "tool_call", "seq": 2, "server": "fs", "tool": "read",
+           "args": {"p": "/big.py"}, "args_hash": "h1"}),
+        L({"kind": "tool_result", "seq": 3, "server": "fs", "tool": "read",
+           "args_hash": "h1", "result": {"text": big_result}}),
+        L({"kind": "model_response", "seq": 4, "provider": "anthropic",
+           "body": L({"content": [{"type": "text", "text": "Found it."}]}),
+           "usage": {"input_tokens": 40000, "cache_read_input_tokens": 0,
+                     "output_tokens": 100}}),
+    ]
+    return "\n".join(lines) + "\n"
+
+
+def test_cost_warnings():
+    """Cost warnings fire when a turn is expensive or a tool result dominates."""
+    import io
+    p = _write(".jsonl", _cost_warning_tape())
+    try:
+        s = tape.parse(p)
+        rows, _ = report._cost_rows(s, "claude-3-5-sonnet-20241022")
+        warnings = flags.check_cost_warnings(s, rows, 0.10)
+        fl = {w["flag"] for w in warnings}
+        _assert("EXPENSIVE_TURN" in fl, "cost warnings: EXPENSIVE_TURN should fire")
+        _assert("EXPENSIVE_TOOL" in fl, "cost warnings: EXPENSIVE_TOOL should fire")
+
+        saved = sys.stdout
+        sys.stdout = io.StringIO()
+        try:
+            rc = main([p, "--cost-json"])
+        finally:
+            output = sys.stdout.getvalue()
+            sys.stdout = saved
+        _assert(rc == 0, f"cost-json CLI exited {rc}")
+        data = json.loads(output)
+        _assert("warnings" in data, "cost-json must include top-level warnings")
+        json_flags = {w["flag"] for w in data["warnings"]}
+        _assert("EXPENSIVE_TURN" in json_flags, "cost-json: EXPENSIVE_TURN should be present")
+        _assert("EXPENSIVE_TOOL" in json_flags, "cost-json: EXPENSIVE_TOOL should be present")
+
+        # A higher threshold should suppress EXPENSIVE_TURN while keeping EXPENSIVE_TOOL.
+        sys.stdout = io.StringIO()
+        try:
+            rc = main([p, "--cost-json", "--cost-threshold", "1.0"])
+        finally:
+            output = sys.stdout.getvalue()
+            sys.stdout = saved
+        _assert(rc == 0, f"cost-json high-threshold CLI exited {rc}")
+        data = json.loads(output)
+        high_flags = {w["flag"] for w in data.get("warnings", [])}
+        _assert("EXPENSIVE_TOOL" in high_flags, "high threshold: EXPENSIVE_TOOL should still fire")
+        _assert("EXPENSIVE_TURN" not in high_flags, "high threshold: EXPENSIVE_TURN should not fire")
+    finally:
+        os.remove(p)
+
+
 def test_cli_exit_codes():
     p = _write(".json", _openai_synthetic())
     saved_out, saved_err = sys.stdout, sys.stderr
@@ -248,10 +312,10 @@ def test_cost():
             sys.stdout = saved
         _assert(rc == 0, f"cost CLI exited {rc}")
         _assert("$" in output, "cost table must contain a dollar amount")
-        # Parse the total from the last non-empty line.
-        last_line = [l for l in output.splitlines() if l.strip()][-1]
+        # Parse the total from the line labelled "total".
+        total_line = [l for l in output.splitlines() if l.strip().startswith("total")][-1]
         # The total is the rightmost dollar field.
-        total_str = last_line.split("$")[-1].replace(",", "")
+        total_str = total_line.split("$")[-1].replace(",", "")
         actual_total = float(total_str)
         ratio = abs(actual_total - expected_total) / expected_total if expected_total else 0
         _assert(ratio <= 0.01,
@@ -267,6 +331,7 @@ def main_selfcheck():
     test_tape()
     test_charts()
     test_cost()
+    test_cost_warnings()
     test_cli_exit_codes()
     print("selfcheck OK")
 

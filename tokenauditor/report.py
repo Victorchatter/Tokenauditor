@@ -2,6 +2,7 @@ import json
 
 from .counters import label as _counter_label
 from .cost import compute_cost, load_prices
+from .flags import check_cost_warnings
 from .parsers import Session
 
 
@@ -97,8 +98,9 @@ def _fmt_cost(n: float) -> str:
     return f"${n:,.6f}" if n >= 0.001 else f"${n:.8f}"
 
 
-def render_cost_table(session: Session, model: str) -> str:
+def render_cost_table(session: Session, model: str, threshold: float = 0.10) -> str:
     rows, total = _cost_rows(session, model)
+    warnings = check_cost_warnings(session, rows, threshold)
     L = []
     L.append(f"tokenauditor cost report — model: {model}")
     L.append("")
@@ -113,15 +115,24 @@ def render_cost_table(session: Session, model: str) -> str:
         )
     L.append("-" * 90)
     L.append(f"{'total':>32} {_fmt_cost(total):>58}")
+    L.append("")
+    L.append("  Warnings:")
+    if warnings:
+        for w in warnings:
+            L.append(f"    {w['message']}")
+    else:
+        L.append("    (none)")
     return "\n".join(L) + "\n"
 
 
-def render_cost_json(session: Session, model: str) -> str:
+def render_cost_json(session: Session, model: str, threshold: float = 0.10) -> str:
     rows, total = _cost_rows(session, model)
+    warnings = check_cost_warnings(session, rows, threshold)
     out = {
         "model": model,
         "currency": "USD",
         "total_cost": total,
         "by_turn": rows,
+        "warnings": warnings,
     }
     return json.dumps(out, indent=2) + "\n"

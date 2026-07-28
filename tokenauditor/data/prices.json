@@ -30,5 +30,10 @@
   "claude-3-haiku-20240307": {
     "input_price_per_1m": 0.25,
     "output_price_per_1m": 1.25
+  },
+  "default": {
+    "input_price_per_1m": 0.0,
+    "output_price_per_1m": 0.0,
+    "comment": "Unknown models are priced at zero by default; add explicit entries or override with --prices."
   }
 }
