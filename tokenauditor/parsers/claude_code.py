@@ -15,6 +15,7 @@ def parse(path: str) -> Session:
     pending_tool_results_tok = 0
     first_total_input = None
     first_user_text_tok = None
+    detected_model = None
 
     with open(path, "r", encoding="utf-8") as f:
         for line in f:
@@ -26,6 +27,8 @@ def parse(path: str) -> Session:
             except json.JSONDecodeError:
                 continue
             t = o.get("type")
+            if detected_model is None:
+                detected_model = _extract_model_from_obj(o)
             if t == "assistant":
                 msg = o.get("message", {})
                 u = msg.get("usage", {}) or {}
@@ -100,7 +103,24 @@ def parse(path: str) -> Session:
         prefix_inferred=True,
         reported_total_input=sum(t.total_input for t in turns),
         reported_total_output=sum(t.output for t in turns),
+        model=detected_model,
     )
+
+
+def _extract_model_from_obj(o):
+    """Return the first explicit model field seen in a transcript object."""
+    if not isinstance(o, dict):
+        return None
+    for key in ("model", "model_id"):
+        val = o.get(key)
+        if isinstance(val, str) and val:
+            return val
+    msg = o.get("message") if isinstance(o.get("message"), dict) else {}
+    for key in ("model", "model_id"):
+        val = msg.get(key)
+        if isinstance(val, str) and val:
+            return val
+    return None
 
 
 def _tool_name_from_result(o):

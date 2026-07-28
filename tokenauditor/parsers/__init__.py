@@ -23,3 +23,4 @@ class Session:
     prefix_inferred: bool = False
     reported_total_input: int = 0
     reported_total_output: int = 0
+    model: str | None = None

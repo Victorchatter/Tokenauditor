@@ -41,6 +41,7 @@ def parse(path: str) -> Session:
         prefix_inferred=False,
         reported_total_input=sum(t.total_input for t in turns),
         reported_total_output=sum(t.output for t in turns),
+        model=None,
     )
 
 

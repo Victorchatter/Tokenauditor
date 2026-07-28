@@ -101,6 +101,8 @@ tokenauditor <file> --by-turn    # summary + per-turn table
 tokenauditor <file> --flags      # waste flags only
 tokenauditor <file> --json       # machine-readable JSON report
 tokenauditor <file> --charts out # write SVG charts to out/
+tokenauditor <file> --cost       # USD cost per turn and total
+tokenauditor <file> --cost-json  # machine-readable cost JSON
 ```
 
 ### Supported transcript formats
@@ -165,6 +167,30 @@ tokenauditor - claude_code, 306 turn(s)
 ```
 
 ---
+
+## Cost reporting
+
+Add `--cost` to estimate USD spend per turn and a running total:
+
+```bash
+tokenauditor session.jsonl --cost
+```
+
+Output columns: turn, input tokens, output tokens, cache tokens, input cost,
+output cost, cache cost, and cumulative cost. The model is auto-detected from
+transcript fields (`model`, `model_id`, etc.); if unknown, tokenauditor warns
+and falls back to a heuristic default. Use `--model <name>` to override.
+
+For machine-readable output:
+
+```bash
+tokenauditor session.jsonl --cost-json
+```
+
+When a transcript reports provider token counts, those are used. Otherwise
+tokenauditor falls back to tiktoken or the offline heuristic and labels the
+estimate. Cache tokens are billed at the model's cache price when known; if no
+cache price is recorded, they are billed at the input price.
 
 ## Visual reports
 
@@ -283,9 +309,12 @@ tokenauditor/
 ├── tokenauditor/
 │   ├── cli.py              # argument parsing + orchestration
 │   ├── counters.py         # tokenization (tiktoken / heuristic)
+│   ├── cost.py             # cost estimation from vendored prices
 │   ├── flags.py            # waste-flag analysis
 │   ├── report.py           # terminal table + JSON renderer
 │   ├── charts.py           # SVG chart generators
+│   ├── data/
+│   │   └── prices.json     # vendored per-model pricing
 │   ├── parsers/
 │   │   ├── detect.py       # format auto-detection
 │   │   ├── claude_code.py  # Claude Code JSONL parser

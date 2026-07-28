@@ -176,4 +176,15 @@ def parse(path: str) -> Session:
         prefix_inferred=False,   # counted from the recorded request, not inferred
         reported_total_input=reported_in,
         reported_total_output=reported_out,
+        model=_extract_model(last_request),
     )
+
+
+def _extract_model(req):
+    if not isinstance(req, dict):
+        return None
+    for key in ("model", "model_id", "model_name"):
+        val = req.get(key)
+        if isinstance(val, str) and val:
+            return val
+    return None

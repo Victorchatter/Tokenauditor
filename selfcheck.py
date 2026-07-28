@@ -144,7 +144,8 @@ def test_claude():
 
 def _tape_synthetic():
     def L(o): return json.dumps(o)
-    req = L({"system": "You are careful. " * 30,
+    req = L({"model": "claude-3-5-sonnet-20241022",
+             "system": "You are careful. " * 30,
              "tools": [{"name": "read", "description": "Read a file",
                         "input_schema": {"type": "object"}}],
              "messages": [{"role": "user", "content": "audit this repo"}]})
@@ -221,12 +222,51 @@ def test_charts():
         os.remove(p)
 
 
+def test_cost():
+    """A tape with known usage and model must produce a known cost within 1%."""
+    import io
+    import sys
+    from tokenauditor.cost import compute_cost, load_prices
+
+    p = _write(".jsonl", _tape_synthetic())
+    try:
+        _assert(detect.detect(p) == "tape", "cost: detect must return 'tape'")
+        s = tape.parse(p)
+        model = getattr(s, "model", None) or "claude-3-5-sonnet-20241022"
+        expected_total = compute_cost(
+            load_prices(), model,
+            s.reported_total_input, s.reported_total_output, 1200,
+        )[3]
+
+        # Capture CLI --cost output.
+        saved = sys.stdout
+        sys.stdout = io.StringIO()
+        try:
+            rc = main([p, "--cost"])
+        finally:
+            output = sys.stdout.getvalue()
+            sys.stdout = saved
+        _assert(rc == 0, f"cost CLI exited {rc}")
+        _assert("$" in output, "cost table must contain a dollar amount")
+        # Parse the total from the last non-empty line.
+        last_line = [l for l in output.splitlines() if l.strip()][-1]
+        # The total is the rightmost dollar field.
+        total_str = last_line.split("$")[-1].replace(",", "")
+        actual_total = float(total_str)
+        ratio = abs(actual_total - expected_total) / expected_total if expected_total else 0
+        _assert(ratio <= 0.01,
+                f"cost total {actual_total} deviates from expected {expected_total} by {ratio:.2%}")
+    finally:
+        os.remove(p)
+
+
 def main_selfcheck():
     test_openai()
     test_codex()
     test_claude()
     test_tape()
     test_charts()
+    test_cost()
     test_cli_exit_codes()
     print("selfcheck OK")
 

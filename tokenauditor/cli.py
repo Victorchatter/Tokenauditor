@@ -6,6 +6,7 @@ from . import charts
 from . import counters
 from . import flags as flags_mod
 from . import report
+from .cost import compute_cost, load_prices, model_from_transcript
 from .parsers import claude_code, codex, detect, openai, tape
 
 
@@ -42,6 +43,12 @@ def main(argv=None) -> int:
     p.add_argument("--by-turn", action="store_true", help="include a per-turn table")
     p.add_argument("--flags", action="store_true", help="print waste flags only")
     p.add_argument("--charts", metavar="DIR", help="write SVG charts (bar.svg + area.svg) to DIR")
+    p.add_argument("--cost", action="store_true",
+                   help="estimate USD spend per turn and total")
+    p.add_argument("--cost-json", action="store_true",
+                   help="emit machine-readable cost JSON")
+    p.add_argument("--model",
+                   help="override the model used for cost estimation (default: auto-detect)")
     p.add_argument("--offline", action="store_true",
                    help="never load tiktoken; use the documented ~4 chars/token heuristic. "
                         "Guarantees no network call is attempted.")
@@ -63,6 +70,23 @@ def main(argv=None) -> int:
         return 2
 
     fl = flags_mod.check(session)
+
+    if args.cost or args.cost_json:
+        model = args.model
+        if not model:
+            # Prefer parser-extracted model; fall back to scanning the transcript.
+            model = getattr(session, "model", None) or model_from_transcript(args.file, fmt)
+        if model == "unknown" or not model:
+            # Heuristic: if we see Anthropic-style usage, assume claude-3-5-sonnet-20241022;
+            # otherwise a small OpenAI model so the report still renders with a warning.
+            model = "claude-3-5-sonnet-20241022" if session.reported_total_input else "gpt-4o-mini"
+            print(f"tokenauditor: could not detect model; assuming {model} for cost estimate",
+                  file=sys.stderr)
+        if args.cost_json:
+            sys.stdout.write(report.render_cost_json(session, model))
+        else:
+            sys.stdout.write(report.render_cost_table(session, model))
+        return 0
 
     if args.charts:
         try:

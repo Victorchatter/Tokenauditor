@@ -54,7 +54,8 @@ def parse(path: str) -> Session:
     cats["total_visible"] = sum(v for k, v in cats.items() if k != "total_visible")
     return Session(format="openai", turns=turns, categories=cats,
                    inferred_prefix=cats["system+tools_prefix"], prefix_inferred=False,
-                   reported_total_input=0, reported_total_output=0)
+                   reported_total_input=0, reported_total_output=0,
+                   model=data.get("model") if isinstance(data, dict) else None)
 
 
 def _count(content) -> int:
