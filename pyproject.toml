@@ -4,7 +4,7 @@ build-backend = "flit_core.buildapi"
 
 [project]
 name = "tokenauditor"
-version = "0.3.0"
+version = "0.3.1"
 description = "Local, read-only CLI that audits where an AI agent session's token budget went."
 readme = "README.md"
 license = {text = "MIT"}
